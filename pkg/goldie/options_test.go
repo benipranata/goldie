@@ -7,6 +7,34 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestWithFixtureDir(t *testing.T) {
+	tests := []struct{ name, dir string }{
+		{name: "custom", dir: "fx"},
+		{name: "empty", dir: ""},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			g := &Goldie{}
+			WithFixtureDir(tc.dir)(g)
+			require.Equal(t, tc.dir, g.fixtureDir)
+		})
+	}
+}
+
+func TestWithNameSuffix(t *testing.T) {
+	tests := []struct{ name, suffix string }{
+		{name: "custom", suffix: ".out"},
+		{name: "empty", suffix: ""},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			g := &Goldie{}
+			WithNameSuffix(tc.suffix)(g)
+			require.Equal(t, tc.suffix, g.suffix)
+		})
+	}
+}
+
 func TestWithDirPerms(t *testing.T) {
 	tests := []struct {
 		name string
@@ -17,9 +45,9 @@ func TestWithDirPerms(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			c := &config{}
-			WithDirPerms(tc.perm)(c)
-			require.Equal(t, tc.perm, c.dirPerms)
+			g := &Goldie{}
+			WithDirPerms(tc.perm)(g)
+			require.Equal(t, tc.perm, g.dirPerms)
 		})
 	}
 }
@@ -34,9 +62,9 @@ func TestWithFilePerms(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			c := &config{}
-			WithFilePerms(tc.perm)(c)
-			require.Equal(t, tc.perm, c.filePerms)
+			g := &Goldie{}
+			WithFilePerms(tc.perm)(g)
+			require.Equal(t, tc.perm, g.filePerms)
 		})
 	}
 }

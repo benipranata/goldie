@@ -1,10 +1,32 @@
 # goldie
 
-Golden file testing built on [testify/require](https://github.com/stretchr/testify), inspired by [sebdah/goldie](https://github.com/sebdah/goldie).
+[![Go Reference](https://pkg.go.dev/badge/github.com/benipranata/goldie/pkg/goldie.svg)](https://pkg.go.dev/github.com/benipranata/goldie/pkg/goldie)
+
+Golden file testing for Go, built on [testify/require](https://github.com/stretchr/testify).
+
+One call. Real diffs. One command to regenerate.
+
+```go
+func TestRender(t *testing.T) {
+	goldie.New(t).Equal("render", []byte(Render())) // testdata/render.golden
+}
+```
+
+## Why goldie
+
+- **Tiny API:** `goldie.New(t).Equal(name, actual)`. That's it.
+- **Built on testify:** failures are `require.Equal` failures, with the diff you already know.
+- **Always up to date:** one command rewrites your golden files, and `-clean` removes the stale ones.
+- **Quiet diffs:** only files that changed are rewritten, so your commits stay clean.
+- **Lightweight:** testify is the only dependency.
+
+## Install
 
 ```sh
 go get github.com/benipranata/goldie
 ```
+
+## Quick start
 
 ```go
 import "github.com/benipranata/goldie/pkg/goldie"
@@ -12,33 +34,82 @@ import "github.com/benipranata/goldie/pkg/goldie"
 //go:generate go test -v -update -clean .
 
 func TestRender(t *testing.T) {
-	goldie.Equal(t, "testdata/render.golden", Render())
+	goldie.New(t).Equal("render", []byte(Render()))
 }
 ```
 
-`goldie.Equal(t, expPath, actual, opts...)` requires `actual` (a `string` or `[]byte`) to equal the contents of the golden file at `expPath`. A mismatch fails through `require.Equal`, so you get testify's diff.
+Create the golden files, then run your tests as usual:
 
 ```sh
-go test ./...                 # compare
-go generate ./...             # regenerate via the directive above
-go test -v -update -clean .   # the same, by hand
+go generate ./...   # writes testdata/render.golden
+go test ./...       # compares against it
 ```
 
-Use `-v`: `go test` hides the logs of passing tests, and update mode reports each golden file it writes or removes through `t.Logf`.
+Change the output, and the test shows exactly what moved:
+
+```
+--- Expected
++++ Actual
+@@ -1,2 +1,2 @@
+-Hello, World
++Hello, Gopher
+```
+
+Happy with the new output? Run `go generate ./...` again and commit the updated file.
+
+## Examples
+
+Subtests, one golden file each (`testdata/TestRender/<subtest>.golden`):
+
+```go
+func TestRender(t *testing.T) {
+	g := goldie.New(t)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			g.Equal(t.Name(), render(tc.input))
+		})
+	}
+}
+```
+
+JSON, in the format you choose:
+
+```go
+b, _ := json.MarshalIndent(got, "", "  ")
+goldie.New(t).Equal("state", b)
+```
+
+HTTP responses:
+
+```go
+rec := httptest.NewRecorder()
+handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/users", nil))
+goldie.New(t).Equal("users", rec.Body.Bytes())
+```
 
 ## Flags
 
-- `-update` writes or overwrites golden files instead of comparing.
-- `-clean` only takes effect with `-update`. Before the first write in a directory, it removes the files in that directory with the same extension as the golden file, once per package run. Subdirectories and files with other extensions are left alone. A golden file without an extension is never cleaned.
+| Flag | What it does |
+|---|---|
+| `-update` | Writes the actual output to the golden files. |
+| `-clean` | With `-update`, removes old golden files first, so ones for deleted tests don't pile up. |
 
-## Caveats of `-clean`
-
-- Run it on the whole package, never with `-run`: golden files of tests that don't run are deleted and not recreated.
-- The same goes for skipped tests and tests excluded by build tags or OS. Their golden files are removed too.
-- Cleaning happens at the first write, before later tests have run. If a test then fails, regenerated files are incomplete. Commit your golden files so `git checkout` can restore them.
-- A directory is only cleaned when a test writes into it, so a directory left behind by deleted tests is never cleaned.
-- `-update` and `-clean` are registered on import, so the package can't be combined with another library that registers the same flags.
+```sh
+go test -v -update ./...          # create or refresh
+go test -v -update -clean ./...   # refresh and remove the stale ones
+```
 
 ## Options
 
-`WithDirPerms` (default `0755`) and `WithFilePerms` (default `0644`).
+```go
+g := goldie.New(t,
+	goldie.WithFixtureDir("fixtures"),  // default: testdata
+	goldie.WithNameSuffix(".txt"),      // default: .golden
+	goldie.WithDirPerms(0o750),         // default: 0755
+	goldie.WithFilePerms(0o600),        // default: 0644
+)
+```
+
+## License
+
+[MIT](LICENSE)
