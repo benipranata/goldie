@@ -17,7 +17,7 @@ func TestRender(t *testing.T) {
 - **Tiny API:** `goldie.New(t).Equal(name, actual)`. That's it.
 - **Built on testify:** failures are `require.Equal` failures, with the diff you already know.
 - **Always up to date:** one command rewrites your golden files, and `-clean` removes the stale ones.
-- **Quiet diffs:** only files that changed are rewritten, so your commits stay clean.
+- **Quiet diffs:** regenerating unchanged output leaves `git diff` empty, so your commits stay clean.
 - **Lightweight:** testify is the only dependency.
 
 ## Install
